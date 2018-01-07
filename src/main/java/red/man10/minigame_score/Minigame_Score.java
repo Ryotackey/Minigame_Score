@@ -151,7 +151,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                         if (rs == null){
 
-                            sender.sendMessage("&4引数が違います");
+                            sender.sendMessage("§4引数が違います");
                             return false;
 
                         }
@@ -196,7 +196,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                     if (rs == null){
 
-                        sender.sendMessage("&4引数が違います");
+                        sender.sendMessage("§4引数が違います");
                         return false;
 
                     }
@@ -236,7 +236,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                         if (rs == null){
 
-                            sender.sendMessage("&4引数が違います");
+                            sender.sendMessage("§4引数が違います");
                             return false;
 
                         }
@@ -296,7 +296,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                         if (rs == null){
 
-                            sender.sendMessage("&4引数が違います");
+                            sender.sendMessage("§4引数が違います");
                             return false;
 
                         }
@@ -355,7 +355,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                         if (rs == null){
 
-                            sender.sendMessage("&4引数が違います");
+                            sender.sendMessage("§4引数が違います");
                             return false;
 
                         }
