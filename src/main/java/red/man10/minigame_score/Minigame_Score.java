@@ -13,6 +13,7 @@ import java.util.UUID;
 public final class Minigame_Score extends JavaPlugin {
 
     CustomConfig item;
+    CustomConfig config;
 
     public MySOLManager mysql;
 
@@ -30,11 +31,13 @@ public final class Minigame_Score extends JavaPlugin {
         item = new CustomConfig(this, "item.yml");
         item.saveDefaultConfig();
 
+        config = new CustomConfig(this, "config.yml");
+        config.saveDefaultConfig();
+
         mysql = new MySOLManager(this, "Test");
 
         getCommand("mgscore").setExecutor(this);
 
-        saveDefaultConfig();
 
     }
 

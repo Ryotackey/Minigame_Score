@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Minigame_Score:jar">
+    <output-path>C:/テスト/plugins</output-path>
+    <root id="archive" name="Minigame_Score.jar">
+      <element id="module-output" name="Minigame_Score" />
+    </root>
+  </artifact>
+</component>
