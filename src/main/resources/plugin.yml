@@ -1,0 +1,3 @@
+name: Minigame_Score
+version: ${project.version}
+main: red.man10.minigame_score.Minigame_Score
