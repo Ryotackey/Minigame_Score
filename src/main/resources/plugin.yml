@@ -1,7 +1,7 @@
 name: Minigame_Score
 version: ${project.version}
 main: red.man10.minigame_score.Minigame_Score
-ommands:
+commands:
   mgscore:
     description: Command no setsumei
     usage: /<command>
