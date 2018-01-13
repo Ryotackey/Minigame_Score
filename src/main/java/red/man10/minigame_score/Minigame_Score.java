@@ -56,7 +56,7 @@ public final class Minigame_Score extends JavaPlugin {
                 Player senderp = (Player) sender;
                 UUID senderpuuid = senderp.getUniqueId();
 
-                ResultSet myrs = mysql.query("SELECT * FROM minigamedb.minigame_score where uuid=" + senderpuuid +"';");
+                ResultSet myrs = mysql.query("SELECT * FROM minigamedb.minigame_score where uuid='" + senderpuuid +"';");
 
                 sendScore(sender, myrs, senderp);
                 return true;
@@ -115,6 +115,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                         if (result == true){
                             p.sendMessage("§adelete complete");
+                            record(p, "delete", "ALL", "ALL");
                         }else {
                             p.sendMessage("§4failed delete");
                         }
@@ -178,6 +179,7 @@ public final class Minigame_Score extends JavaPlugin {
                                 ItemStack rewarditem = item.getConfig().getItemStack("item." + args[1]);
                                 getterp.getInventory().addItem(rewarditem);
                                 getterp.sendMessage("§a交換完了しました§f(§e" + args[1] + "§f:" + point + "§6⇒§f" + (point-5) + ")");
+                                record(getterp, "getitem", "-5", args[1]);
 
                             }else {
                                 getterp.sendMessage("§c交換できません！");
@@ -260,6 +262,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                     if (insert == true) {
                                         Bukkit.broadcastMessage("§ainsert complete");
+                                        record(p, "set", args[3], args[2]);
                                         return true;
                                     } else {
                                         Bukkit.broadcastMessage("§cfailed insert");
@@ -272,6 +275,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                 if (update == true) {
                                     Bukkit.broadcastMessage("§aset complete");
+                                    record(p, "set", args[3], args[2]);
                                     return true;
                                 } else {
                                     Bukkit.broadcastMessage("§cfailed set");
@@ -318,6 +322,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                     if (insert == true) {
                                         Bukkit.broadcastMessage("§ainsert complete");
+                                        record(p, "add", args[3], args[2]);
                                         return true;
                                     } else {
                                         Bukkit.broadcastMessage("§cfailed insert");
@@ -331,6 +336,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                 if (update == true) {
                                     Bukkit.broadcastMessage("§aadd complete");
+                                    record(p, "add", args[3], args[2]);
                                     return true;
                                 } else {
                                     Bukkit.broadcastMessage("§cfailed add");
@@ -377,6 +383,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                     if (insert == true) {
                                         Bukkit.broadcastMessage("§ainsert complete");
+                                        record(p, "reduce", args[3], args[2]);
                                         return true;
                                     } else {
                                         Bukkit.broadcastMessage("§cfailed insert");
@@ -389,6 +396,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                 if (update == true) {
                                     Bukkit.broadcastMessage("§areduce complete");
+                                    record(p, "reduce", args[3], args[2]);
                                     return true;
                                 } else {
                                     Bukkit.broadcastMessage("§cfailed reduce");
@@ -493,6 +501,20 @@ public final class Minigame_Score extends JavaPlugin {
         rc.count = count1;
 
         return rc;
+    }
+
+    public void record(Player p, String command, String amoount, String game){
+
+        boolean insert = mysql.execute("insert into minigamedb.minigame_record(game, name, uuid, command, amount) values('" + game + "', '" + p.getName() + "', '" + p.getUniqueId() + "', '" + command + "', '" + amoount + "');");
+
+        if (insert == true) {
+            Bukkit.broadcastMessage("§arecord complete");
+            return;
+        } else {
+            Bukkit.broadcastMessage("§cfailed record");
+            return;
+        }
+
     }
 
 }
