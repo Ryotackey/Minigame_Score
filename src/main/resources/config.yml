@@ -1,6 +1,6 @@
 mysql:
-  host: 150.95.128.54
-  user: root
-  pass: EtpnEgrEk8A
-  port: 6306
-  db: minigamedb
+  host:
+  user:
+  pass:
+  port:
+  db:

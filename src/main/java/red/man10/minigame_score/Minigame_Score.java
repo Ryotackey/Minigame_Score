@@ -275,7 +275,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                 if (update == true) {
                                     Bukkit.broadcastMessage("§aset complete");
-                                    record(p, "set", args[3], args[2]);
+                                    record(p, "set", "set" + args[3], args[2]);
                                     return true;
                                 } else {
                                     Bukkit.broadcastMessage("§cfailed set");
@@ -396,7 +396,7 @@ public final class Minigame_Score extends JavaPlugin {
 
                                 if (update == true) {
                                     Bukkit.broadcastMessage("§areduce complete");
-                                    record(p, "reduce", args[3], args[2]);
+                                    record(p, "reduce", "-" + args[3], args[2]);
                                     return true;
                                 } else {
                                     Bukkit.broadcastMessage("§cfailed reduce");
