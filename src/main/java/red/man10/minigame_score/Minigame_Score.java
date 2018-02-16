@@ -1,23 +1,24 @@
 package red.man10.minigame_score;
 
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.UUID;
+import java.util.concurrent.*;
 
 public final class Minigame_Score extends JavaPlugin {
 
     CustomConfig item;
     CustomConfig config;
 
-    public MySOLManager mysql;
+    MySOLManager mysql;
 
-    public class ReturnColumn{
+    Score_Process process = new Score_Process(this);
+
+    public static class ReturnColumn{
 
         String[] name;
         int count;
@@ -47,23 +48,35 @@ public final class Minigame_Score extends JavaPlugin {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        switch (args.length){
+        ExecutorService service = Executors.newFixedThreadPool(10);
+
+        switch (args.length) {
 
             case 0:
                 if (!(sender instanceof Player)) return false;
                 Player senderp = (Player) sender;
                 UUID senderpuuid = senderp.getUniqueId();
 
-                ResultSet myrs = mysql.query("SELECT * FROM minigamedb.minigame_score where uuid='" + senderpuuid +"';");
+                Future<ResultSet> myrsfuture = service.submit(new MySQLQuery("SELECT * FROM minigame.minigame_score where uuid='" + senderpuuid + "';", this));
 
-                sendScore(sender, myrs, senderp);
+                ResultSet myrs = null;
+
+                try {
+                    myrs = myrsfuture.get();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                }
+
+                process.sendScore(sender, myrs, senderp);
                 return true;
 
             case 1:
                 if (args[0].equalsIgnoreCase("help")) {
-                    if (sender.hasPermission("minigamescore")){
+                    if (sender.hasPermission("minigamescore")) {
 
                         sender.sendMessage("§6§l========§a§l<§b§lMinigame §e§lScore§a§l>§6§l========");
                         sender.sendMessage("・/mgscore show [名前] : [名前]の人のスコア一覧を見る");
@@ -78,8 +91,8 @@ public final class Minigame_Score extends JavaPlugin {
                     }
                 }
 
-                if(args[0].equalsIgnoreCase("reload")){
-                    if (sender.hasPermission("minigamescore")){
+                if (args[0].equalsIgnoreCase("reload")) {
+                    if (sender.hasPermission("minigamescore")) {
 
                         reloadConfig();
                         item.reloadConfig();
@@ -87,434 +100,144 @@ public final class Minigame_Score extends JavaPlugin {
 
                     }
                 }
+                break;
 
             case 2:
                 if (args[0].equalsIgnoreCase("show")) {
                     if (sender.hasPermission("minigamescore")) {
 
-                        Player p = Bukkit.getPlayer(args[1]);
-                        UUID puuid = p.getUniqueId();
-
-                        ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score where uuid='" + puuid + "';");
-                        sendScore(sender, rs, p);
-
+                        process.showScore(args, sender);
                         return true;
-                    }else {
+
+                    } else {
                         sender.sendMessage("§4§l権限がありません");
+                        return false;
                     }
 
                 }
 
-                if (args[0].equalsIgnoreCase("delete")){
-                    if (sender.hasPermission("minigamescore")){
+                if (args[0].equalsIgnoreCase("delete")) {
+                    if (sender.hasPermission("minigamescore")) {
 
-                        Player p = Bukkit.getPlayer(args[1]);
-                        UUID puuid = p.getUniqueId();
-
-                        boolean result = mysql.execute("DELETE FROM `minigamedb`.`minigame_score` WHERE uuid='" + puuid + "';");
-
-                        if (result == true){
-                            p.sendMessage("§adelete complete");
-                            record(p, "delete", "ALL", "ALL");
-                        }else {
-                            p.sendMessage("§4failed delete");
-                        }
-
+                        process.deleteScore(args);
                         return true;
 
-                    }else {
+                    } else {
                         sender.sendMessage("§4権限がありません");
                     }
                 }
 
-                if (args[0].equalsIgnoreCase("additem")){
+                if (args[0].equalsIgnoreCase("additem")) {
                     if (!(sender instanceof Player)) return false;
                     Player havep = (Player) sender;
-                    if (sender.hasPermission("minigamescore")){
+                    if (sender.hasPermission("minigamescore")) {
 
                         item.getConfig().set("item." + args[1], havep.getInventory().getItemInMainHand());
                         item.saveConfig();
 
                         havep.sendMessage("§aitemadd complete");
 
-                    }else {
+                    } else {
                         sender.sendMessage("&4&l権限がありません");
                     }
                 }
 
-                if (args[0].equalsIgnoreCase("getitem")){
-                    if (sender.hasPermission("minigamescore")){
+                if (args[0].equalsIgnoreCase("getitem")) {
+                    if (sender.hasPermission("minigamescore")) {
                         if (!(sender instanceof Player)) return false;
-                        Player getterp = (Player) sender;
-                        UUID puuid = getterp.getUniqueId();
-
-                        ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score where uuid='" + puuid + "';");
-
-                        if (rs == null){
-
-                            sender.sendMessage("§4引数が違います");
-                            return false;
-
-                        }
-
-
-                        int point = 0;
-
-                        try {
-                            while (rs.next()){
-
-                                point = rs.getInt(args[1]);
-
-                            }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-
-                        if (point >= 5) {
-
-                            boolean result = mysql.execute("update minigamedb.minigame_score set " + args[1] + "=" + args[1] + "-5 where uuid='" + puuid + "';");
-                            boolean result1 = mysql.execute("update minigamedb.minigame_history set " + args[1] + "_exchange = " + args[1] + "_exchange+1 where uuid='" + puuid + "';");
-                            if (result == true && result1 == true) {
-
-                                ItemStack rewarditem = item.getConfig().getItemStack("item." + args[1]);
-                                getterp.getInventory().addItem(rewarditem);
-                                getterp.sendMessage("§a交換完了しました§f(§e" + args[1] + "§f:" + point + "§6⇒§f" + (point-5) + ")");
-                                record(getterp, "getitem", "-5", args[1]);
-
-                            }else {
-                                getterp.sendMessage("§c交換できません！");
-                            }
-
-                        }else {
-                            getterp.sendMessage("§c交換には5ポイント必要です");
-                        }
-
+                        process.getItem(args, sender);
                     }
                 }
 
-                if (args[0].equalsIgnoreCase("rank")){
+                if (args[0].equalsIgnoreCase("rank")) {
 
-                    ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score ORDER BY " + args[1] + " desc limit 10;");
-
-                    if (rs == null){
-
-                        sender.sendMessage("§4引数が違います");
-                        return false;
-
-                    }
-
-                    int i = 0;
-
-                    try {
-                        while (rs.next()){
-
-                            String rankname = rs.getString("name");
-                            int rank = rs.getInt(args[1]);
-
-                            if (i == 0){
-                                sender.sendMessage("§a§l========§b§l" + args[1] + "§e§lRanking§a§l========");
-                            }
-
-                            sender.sendMessage("§l" + (i+1) + ".  §6§l" + rankname + " §c§l: §e§l" + rank);
-
-                            i++;
-
-                        }
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
+                    process.getRank(args, sender);
 
                     return true;
 
                 }
+                break;
 
             case 4:
-                if (args[0].equalsIgnoreCase("set")){
+                if (args[0].equalsIgnoreCase("set")) {
                     if (sender.hasPermission("minigamescore")) {
-                        Player p = Bukkit.getPlayer(args[1]);
-                        UUID puuid = p.getUniqueId();
 
-                        ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score;");
+                        process.setScore(args, sender);
 
-                        if (rs == null){
+                        return true;
 
-                            sender.sendMessage("§4引数が違います");
-                            return false;
-
-                        }
-
-
-                        ResultSet count = mysql.query("SELECT count(1) FROM minigamedb.minigame_score WHERE uuid='" + String.valueOf(puuid) + "';");
-
-
-
-                        try {
-                            while (rs.next()) ;
-                            {
-
-                                count.first();
-
-                                int count1 = count.getInt("count(1)");
-
-                                if (count1 == 0) {
-
-                                    boolean insert = mysql.execute("insert into minigamedb.minigame_score(name, uuid, " + args[2] + ") values('" + p.getName() + "', '" + puuid + "', " + args[3] + ");");
-
-                                    if (insert == true) {
-                                        Bukkit.broadcastMessage("§ainsert complete");
-                                        record(p, "set", args[3], args[2]);
-                                        return true;
-                                    } else {
-                                        Bukkit.broadcastMessage("§cfailed insert");
-                                        return false;
-                                    }
-
-                                }
-
-                                boolean update = mysql.execute("update minigamedb.minigame_score set " + args[2] + "=" + args[3] + " where uuid='" + puuid + "';");
-
-                                if (update == true) {
-                                    Bukkit.broadcastMessage("§aset complete");
-                                    record(p, "set", "set" + args[3], args[2]);
-                                    return true;
-                                } else {
-                                    Bukkit.broadcastMessage("§cfailed set");
-                                    return false;
-                                }
-
-                            }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    }else {
+                    } else {
                         sender.sendMessage("§4§l権限がありません");
                     }
                 }
 
-                if (args[0].equalsIgnoreCase("add")){
+                if (args[0].equalsIgnoreCase("add")) {
                     if (sender.hasPermission("minigamescore")) {
-                        Player p = Bukkit.getPlayer(args[1]);
-                        UUID puuid = p.getUniqueId();
 
-                        ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score;");
+                        process.addScore(args, sender);
 
-                        if (rs == null){
-
-                            sender.sendMessage("§4引数が違います");
-                            return false;
-
-                        }
-
-
-                        ResultSet count = mysql.query("SELECT count(1) FROM minigamedb.minigame_score WHERE uuid='" + String.valueOf(puuid) + "';");
-
-                        try {
-                            while (rs.next()) {
-
-                                count.first();
-
-                                int count1 = count.getInt("count(1)");
-
-                                if (count1 == 0) {
-
-                                    boolean insert = mysql.execute("insert into minigamedb.minigame_score(name, uuid, " + args[2] + ") values('" + p.getName() + "', '" + puuid + "', " + args[3] +");");
-                                    boolean insert1 = mysql.execute("insert into minigamedb.minigame_history(name, uuid, " + args[2] + ") values('" + p.getName() + "', '" + puuid + "', " + args[3] + ");");
-
-                                    if (insert == true) {
-                                        Bukkit.broadcastMessage("§ainsert complete");
-                                        record(p, "add", args[3], args[2]);
-                                        return true;
-                                    } else {
-                                        Bukkit.broadcastMessage("§cfailed insert");
-                                        return false;
-                                    }
-
-                                }
-
-                                boolean update = mysql.execute("update minigamedb.minigame_score set " + args[2] + "=" + args[2] + "+" + args[3] + " where uuid='" + puuid + "';");
-                                boolean update1 = mysql.execute("update minigamedb.minigame_history set " + args[2] + "=" + args[2] + "+" + args[3] + " where uuid='" + puuid + "';");
-
-                                if (update == true) {
-                                    Bukkit.broadcastMessage("§aadd complete");
-                                    record(p, "add", args[3], args[2]);
-                                    return true;
-                                } else {
-                                    Bukkit.broadcastMessage("§cfailed add");
-                                    return false;
-                                }
-
-                            }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    }else {
+                        return true;
+                    } else {
                         sender.sendMessage("§4§l権限がありません");
                     }
                 }
 
                 if (args[0].equalsIgnoreCase("reduce")) {
                     if (sender.hasPermission("minigamescore")) {
-                        Player p = Bukkit.getPlayer(args[1]);
-                        UUID puuid = p.getUniqueId();
 
-                        ResultSet rs = mysql.query("SELECT * FROM minigamedb.minigame_score;");
+                        process.reduceScore(args, sender);
 
-                        if (rs == null){
-
-                            sender.sendMessage("§4引数が違います");
-                            return false;
-
-                        }
-
-
-                        ResultSet count = mysql.query("SELECT count(1) FROM minigamedb.minigame_score WHERE uuid='" + String.valueOf(puuid) + "';");
-
-                        try {
-                            while (rs.next()) ;
-                            {
-
-                                count.first();
-
-                                int count1 = count.getInt("count(1)");
-
-                                if (count1 == 0) {
-
-                                    boolean insert = mysql.execute("insert into minigamedb.minigame_score(name, uuid, " + args[2] + ") values('" + p.getName() + "', '" + puuid + "', -" + args[3] + ");");
-
-                                    if (insert == true) {
-                                        Bukkit.broadcastMessage("§ainsert complete");
-                                        record(p, "reduce", args[3], args[2]);
-                                        return true;
-                                    } else {
-                                        Bukkit.broadcastMessage("§cfailed insert");
-                                        return false;
-                                    }
-
-                                }
-
-                                boolean update = mysql.execute("update minigamedb.minigame_score set " + args[2] + "=" + args[2] + "-" + args[3] + " where uuid='" + puuid + "';");
-
-                                if (update == true) {
-                                    Bukkit.broadcastMessage("§areduce complete");
-                                    record(p, "reduce", "-" + args[3], args[2]);
-                                    return true;
-                                } else {
-                                    Bukkit.broadcastMessage("§cfailed reduce");
-                                    return false;
-                                }
-
-                            }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    }else {
+                        return true;
+                    } else {
                         sender.sendMessage("§4§l権限がありません");
                     }
                 }
-
+                break;
 
         }
-
-        return true;
+        return false;
     }
 
-    public void sendScore(CommandSender sender, ResultSet rs, Player p){
 
-        UUID puuid = p.getUniqueId();
 
-        ResultSet count = mysql.query("SELECT count(1) FROM minigamedb.minigame_score WHERE uuid='" + String.valueOf(puuid) + "';");
+}
 
-        ReturnColumn mn = minigame_name();
+class MySQLQuery implements Callable<ResultSet> {
 
-        int count1 = -1;
+    private String sql;
+    private final Minigame_Score plugin;
 
-        try {
-            while (count.next()) {
-                count1 = count.getInt("count(1)");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        if (count1 == 0){
-
-            mysql.execute("insert into minigamedb.minigame_score(name, uuid) values('" + p.getName() + "', '" + puuid +"');");
-
-        }
-
-        try {
-            while (rs.next()){
-
-                sender.sendMessage("§e§l-----§f§l" + p.getDisplayName() + "§e§l-----");
-
-                for (int i = 0; i < mn.count; i++) {
-                    sender.sendMessage("§a" + mn.name[i]  +"§f:" + String.valueOf(rs.getInt(mn.name[i])));
-                }
-                return;
-
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return;
-
+    public MySQLQuery(String sql, Minigame_Score plugin){
+        this.sql = sql;
+        this.plugin = plugin;
     }
 
-    public ReturnColumn minigame_name(){
+    @Override
+    public ResultSet call(){
 
-        ResultSet rs = mysql.query("Select COLUMN_NAME From INFORMATION_SCHEMA.COLUMNS where table_name='minigame_score' and DATA_TYPE='bigint';");
-        ResultSet count = mysql.query("select count(1) from information_schema.columns where table_name='minigame_score' and DATA_TYPE='bigint'");
+        ResultSet rs = plugin.mysql.query(sql);
 
-        String[] game_name;
-
-        ReturnColumn rc = new ReturnColumn();
-
-        int count1 = 0;
-
-        try {
-            while (count.next()){
-                count.first();
-
-                count1 = count.getInt("count(1)");
-
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        game_name = new String[count1];
-
-        try {
-            int i = 0;
-            while (rs.next()){
-
-                game_name[i] = rs.getString("COLUMN_NAME");
-
-                i++;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        rc.name = game_name;
-        rc.count = count1;
-
-        return rc;
+        return rs;
     }
 
-    public void record(Player p, String command, String amoount, String game){
+}
 
-        boolean insert = mysql.execute("insert into minigamedb.minigame_record(game, name, uuid, command, amount) values('" + game + "', '" + p.getName() + "', '" + p.getUniqueId() + "', '" + command + "', '" + amoount + "');");
+class MySQLExcute implements Callable<Boolean> {
 
-        if (insert == true) {
-            Bukkit.broadcastMessage("§arecord complete");
-            return;
-        } else {
-            Bukkit.broadcastMessage("§cfailed record");
-            return;
-        }
+    private String sql;
+    private final Minigame_Score plugin;
 
+    public MySQLExcute(String sql, Minigame_Score plugin){
+        this.sql = sql;
+        this.plugin = plugin;
+    }
+
+    @Override
+    public Boolean call(){
+
+        Boolean result = plugin.mysql.execute(sql);
+
+        return result;
     }
 
 }
