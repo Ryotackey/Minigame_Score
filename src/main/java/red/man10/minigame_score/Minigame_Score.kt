@@ -251,61 +251,68 @@ class Minigame_Score : JavaPlugin() {
 
 class SendScore(private val plugin: Minigame_Score, val p: Player, val sender: CommandSender) : Thread() {
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val count = mysql.query("SELECT count(1) FROM minigame_score WHERE uuid='" + p.uniqueId.toString() + "';")
 
-        if (count != null) {
+        if (count == null) {
+            sender.sendMessage("§4データが存在しないか、データベースに接続できません")
+            return
+        }
 
-            val rs = mysql.query("SELECT * FROM minigame_score where uuid='${p.uniqueId}';")
+        val rs = mysql.query("SELECT * FROM minigame_score where uuid='${p.uniqueId}';")
 
-            if (rs != null) {
+        if (rs == null) {
+            sender.sendMessage("§4データが存在しないか、データベースに接続できません")
+            return
+        }
 
-                val minigame_name = mutableListOf<String>()
+        val minigame_name = mutableListOf<String>()
 
-                val name = mysql.query("Select COLUMN_NAME From INFORMATION_SCHEMA.COLUMNS where table_name='minigame_score' and DATA_TYPE='bigint';")
+        val name = mysql.query("Select COLUMN_NAME From INFORMATION_SCHEMA.COLUMNS where table_name='minigame_score' and DATA_TYPE='bigint';")
 
-                if (name != null) {
+        if (name == null){
+            sender.sendMessage("§4データが存在しないか、データベースに接続できません")
+            return
+        }
 
-                    while (name.next()) {
-                        minigame_name.add(name.getString("COLUMN_NAME"))
-                    }
+        while (name.next()){
+            minigame_name.add(name.getString("COLUMN_NAME"))
+        }
 
-                    count.first()
+        count.first()
 
-                    val countnum = count.getInt("count(1)")
+        val countnum = count.getInt("count(1)")
 
-                    if (countnum == 0) {
+        if (countnum == 0) {
 
-                        mysql.execute("insert into minigame_score(name, uuid) values('" + p.name + "', '" + p.uniqueId + "');")
+            mysql.execute("insert into minigame_score(name, uuid) values('" + p.name + "', '" + p.uniqueId + "');")
 
-                    }
+        }
 
-                    while (rs.next()) {
-                        sender.sendMessage("§e§l-----§f§l" + p.displayName + "§e§l-----")
-                        for (i in minigame_name) {
-                            sender.sendMessage("§a" + i + "§f:" + rs.getInt(i).toString())
-                        }
-                    }
-
-                    count.close()
-                    name.close()
-                    rs.close()
-                    mysql.close()
-                }
+        while (rs.next()) {
+            sender.sendMessage("§e§l-----§f§l" + p.displayName + "§e§l-----")
+            for (i in minigame_name) {
+                sender.sendMessage("§a" + i + "§f:" + rs.getInt(i).toString())
             }
         }
+
+        count.close()
+        name.close()
+        rs.close()
+        mysql.close()
+        return
+
     }
 
 }
 
 class DeleteScore(val plugin: Minigame_Score, val p: Player, val sender: CommandSender): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val result = mysql.execute("DELETE FROM `minigame_score` WHERE uuid='${p.uniqueId}';")
 
@@ -323,9 +330,8 @@ class DeleteScore(val plugin: Minigame_Score, val p: Player, val sender: Command
 
 class Record(val plugin: Minigame_Score, val p: Player, val sender: CommandSender, val command: String, val amount: String, val game: String): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val result = mysql.execute("insert into minigame_record(game, name, uuid, command, amount) values('" + game + "', '" + p.name + "', '" + p.uniqueId + "', '" + command + "', '" + amount + "');")
 
@@ -341,9 +347,9 @@ class Record(val plugin: Minigame_Score, val p: Player, val sender: CommandSende
 
 class GetItem(val plugin: Minigame_Score, val p: Player, val game: String): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+
+        val mysql = MySQLManager(plugin, "Minigame_Score")
         val rs = mysql.query("SELECT * FROM minigame_score where uuid='${p.uniqueId}';")
 
         if (rs == null) {
@@ -383,9 +389,8 @@ class GetItem(val plugin: Minigame_Score, val p: Player, val game: String): Thre
 
 class GetRank(val plugin: Minigame_Score, val sender: CommandSender, val game: String): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val rs = mysql.query("SELECT * FROM minigame_score ORDER BY $game desc limit 10;")
 
@@ -418,9 +423,9 @@ class GetRank(val plugin: Minigame_Score, val sender: CommandSender, val game: S
 
 class SetScore(val plugin: Minigame_Score, val sender: CommandSender, val game: String, val p: Player, val amount: Int): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val count = mysql.query("SELECT count(1) FROM minigame_score WHERE uuid='" + p.uniqueId + "';")
 
@@ -478,9 +483,9 @@ class SetScore(val plugin: Minigame_Score, val sender: CommandSender, val game: 
 
 class AddScore(val plugin: Minigame_Score, val sender: CommandSender, val game: String, val p: Player, val amount: Int): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val count = mysql.query("SELECT count(1) FROM minigame_score WHERE uuid='" + p.uniqueId + "';")
 
@@ -534,9 +539,9 @@ class AddScore(val plugin: Minigame_Score, val sender: CommandSender, val game: 
 
 class ReduceScore(val plugin: Minigame_Score, val sender: CommandSender, val game: String, val p: Player, val amount: Int): Thread(){
 
-    val mysql = MySQLManager(plugin, "Minigame_Score")
-
     override fun run() {
+
+        val mysql = MySQLManager(plugin, "Minigame_Score")
 
         val count = mysql.query("SELECT count(1) FROM minigame_score WHERE uuid='" + p.uniqueId + "';")
 
@@ -588,13 +593,13 @@ class ReduceScore(val plugin: Minigame_Score, val sender: CommandSender, val gam
     }
 }
 
-class CreateTable(plugin: Minigame_Score): Thread(){
-
-    val mysql = MySQLManager(plugin, "Minigame_Score")
+class CreateTable(val plugin: Minigame_Score): Thread(){
 
     override fun run() {
 
-        mysql.execute("CREATE TABLE if not exists `minigame_history` (\n" +
+        val mysql = MySQLManager(plugin, "Minigame_Score")
+
+        mysql.execute("CREATE TABLE `minigame_history` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `name` varchar(50) DEFAULT NULL,\n" +
                 "  `uuid` varchar(50) DEFAULT NULL,\n" +
@@ -614,7 +619,7 @@ class CreateTable(plugin: Minigame_Score): Thread(){
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=latin1;")
 
-        mysql.execute("CREATE TABLE if not exists `minigame_record` (\n" +
+        mysql.execute("CREATE TABLE `minigame_record` (\n" +
                 "  `id` int(20) NOT NULL AUTO_INCREMENT,\n" +
                 "  `game` varchar(50) DEFAULT NULL,\n" +
                 "  `name` varchar(50) DEFAULT NULL,\n" +
@@ -626,7 +631,7 @@ class CreateTable(plugin: Minigame_Score): Thread(){
                 ") ENGINE=InnoDB DEFAULT CHARSET=latin1;\n" +
                 "\n")
 
-        mysql.execute("CREATE TABLE if not exists `minigame_score` (\n" +
+        mysql.execute("CREATE TABLE `minigame_score` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `name` varchar(50) DEFAULT NULL,\n" +
                 "  `uuid` varchar(50) DEFAULT NULL,\n" +
@@ -640,6 +645,8 @@ class CreateTable(plugin: Minigame_Score): Thread(){
                 "  `time` int(20) DEFAULT NULL,\n" +
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB AUTO_INCREMENT=343 DEFAULT CHARSET=latin1;\n")
+
+        return
 
     }
 
